@@ -1,0 +1,56 @@
+---
+title: "ICA experiment diagnostics"
+author: "Alexander Mangulad Christgau"
+output: knitr:::html_vignette
+---
+
+This markdown document examines results from experiments of Independent Component Analysis applied on EEG data, and accompanies a project on the aforementioned.
+
+
+```{r setup, include=FALSE}
+#Load packages
+library(ggplot2)   ## Grammar of graphics
+library(reshape2)  ## Reshaping data frames
+library(gridExtra) ## ... and more graphics
+library(xtable)    ## LaTeX formatting of tables
+library(plyr)
+```
+
+Load data
+```{r}
+SVMdata<- read.csv(file = 'SVM2.csv')
+```
+
+
+Compute standard deviations
+```{r}
+ag <- aggregate(. ~ Method:n_train, SVMdata, function(x) c(sd = sd(x)))
+sp<-ggplot(ag, aes(x=n_train, y=Accuracy, color=Method)) + geom_smooth() + 
+  labs(x = "Number of training subjects", y = "Standard deviation of prediction accuarcy")
+sp
+```
+
+Fit simple linear model with main effects
+```{r}
+mod1 <- glm(Accuracy~Method + n_train, data = SVMdata)
+summary(mod1)
+plot(mod1)
+xtable(mod1)
+```
+
+Diagnostics plots for residuals:
+```{r}
+resids <- function(glmmod){
+  p1 <- qplot(fitted(glmmod), residuals(glmmod), alpha =I(.5)) + 
+    geom_smooth() + xlab("Fitted values") + ylab("Residuals")
+  p2 <- qplot(residuals(glmmod), geom = "histogram") + 
+    xlab("residuals")
+  p3 <- qplot(sample=rstandard(glmmod), geom = "qq") + geom_abline(slope=1, intercept = 0) +
+    xlab("QQ-plot")
+  grid.arrange(p1,p2,p3,ncol=3)
+}
+resids(mod1)
+```
+
+
+Other model could also be considered, but it does not make too much sense to do advanced statistical analysis on the results.
